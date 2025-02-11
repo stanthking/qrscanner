@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Code Scanner</title>
+    <script src="https://unpkg.com/instascan@0.4.0/dist/instascan.min.js"></script>
+</head>
+<body>
+    <h1>QR Code Scanner</h1>
+    
+    <!-- Kamera görüntüsünün gösterileceği alan -->
+    <video id="camera" width="100%" height="auto" autoplay></video>
+    
+    <h2>QR Code Results</h2>
+    <p><strong>Facility Code:</strong> <span id="facility-code">-</span></p>
+    <p><strong>Card Number:</strong> <span id="card-number">-</span></p>
+
+    <script>
+        // Kamera başlatma fonksiyonu
+        async function startCamera() {
+            const videoElement = document.getElementById('camera');
+            try {
+                // Kamera erişimi isteği
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'environment' }  // Telefonun arka kamerası
+                });
+
+                // Video elementine stream'i bağlama
+                videoElement.srcObject = stream;
+                videoElement.onloadedmetadata = () => {
+                    videoElement.play();
+                };
+                
+                // Instascan scanner'ını başlat
+                const scanner = new Instascan.Scanner({ video: videoElement });
+                scanner.addListener('scan', function (content) {
+                    console.log(content);  // QR kod içeriğini yazdırma
+                    // QR koddan veriyi ayıkla ve göster
+                    const [facilityCode, cardNumber] = processQRCode(content);
+                    document.getElementById('facility-code').textContent = facilityCode;
+                    document.getElementById('card-number').textContent = cardNumber;
+                });
+
+                // Kamerayı başlat
+                Instascan.Camera.getCameras().then(function (cameras) {
+                    if (cameras.length > 0) {
+                        scanner.start(cameras[0]);  // İlk kamerayı başlat
+                    } else {
+                        alert('Kamera bulunamadı!');
+                    }
+                }).catch(function (e) {
+                    alert('Kamera başlatılamadı: ' + e);
+                });
+
+            } catch (err) {
+                console.error("Kamera başlatılamadı: ", err);
+                alert("Kamera erişim izni alınamadı.");
+            }
+        }
+
+        // QR kod verisini ayıklama fonksiyonu
+        function processQRCode(qrData) {
+            // QR kod içeriğini işler ve facility code ile card number'ı ayıklar
+            try {
+                const data = qrData.split(',');  // QR kodu virgülle ayırarak veriyi al
+                const number = parseInt(data[0]);  // İlk kısmı sayıya dönüştür
+                const facilityCode = Math.floor(number / 65536);  // Facility code hesaplama
+                const cardNumber = number % 65536;  // Card number hesaplama
+                return [facilityCode, cardNumber];
+            } catch (err) {
+                return ['-', '-'];
+            }
+        }
+
+        // Kamera başlatıldığında fonksiyonu çağır
+        startCamera();
+    </script>
+</body>
+</html>
