@@ -1,0 +1,16 @@
+{
+  "name": "QR Code Scanner",
+  "short_name": "QR Scanner",
+  "description": "A simple QR code scanner for web",
+  "start_url": "/",
+  "display": "standalone",  // Uygulamanın tam ekran modda çalışmasını sağlar
+  "background_color": "#ffffff",  // Arka plan rengi
+  "theme_color": "#ffffff",  // Tarayıcıda veya uygulama çubuğunda kullanılacak tema rengi
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}

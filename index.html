@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#ffffff">
+    <title>QR Code Scanner</title>
+
+    <!-- Manifest dosyasını dahil et -->
+    <link rel="manifest" href="manifest.json">
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            flex-direction: column;
+            background-color: #f0f0f0;
+        }
+        #scanner {
+            width: 80%;
+            height: 60%;
+            background-color: #000;
+        }
+        #result {
+            margin-top: 20px;
+            font-size: 20px;
+        }
+        .label {
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .error {
+            color: red;
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+    <h1>QR Code Scanner</h1>
+    <video id="scanner" autoplay></video>
+    <div id="result">Scan a QR code</div>
+    <div id="facility" class="label">Facility Code: -</div>
+    <div id="card" class="label">Card Number: -</div>
+    <div id="error-message" class="error"></div>
+
+    <script src="https://unpkg.com/jsqr/dist/jsQR.js"></script>
+    <script>
+        // Kamera erişimi başlatan fonksiyon
+        async function startCamera() {
+            const videoElement = document.getElementById('scanner');
+            const errorMessageElement = document.getElementById('error-message');
+            const constraints = {
+                video: { facingMode: 'environment' }  // Arka kamerayı kullan
+            };
+
+            try {
+                // Kamera erişimi sağla
+                const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                videoElement.srcObject = stream;
+
+                // QR kod taraması için canvas elementini oluştur
+                const canvasElement = document.createElement('canvas');
+                const canvasContext = canvasElement.getContext('2d');
+
+                videoElement.addEventListener('play', function() {
+                    const scanQRCode = () => {
+                        if (videoElement.paused || videoElement.ended) {
+                            return;
+                        }
+
+                        // Video boyutlarına göre canvas boyutunu ayarla
+                        canvasElement.height = videoElement.videoHeight;
+                        canvasElement.width = videoElement.videoWidth;
+
+                        // Video görüntüsünü canvas'a çiz
+                        canvasContext.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
+                        const imageData = canvasContext.getImageData(0, 0, canvasElement.width, canvasElement.height);
+                        const code = jsQR(imageData.data, canvasElement.width, canvasElement.height);
+
+                        if (code) {
+                            const qrData = code.data;
+                            document.getElementById('result').textContent = `QR Code Data: ${qrData}`;
+
+                            const [facilityCode, cardNumber] = processQRCodeData(qrData);
+                            if (facilityCode !== null && cardNumber !== null) {
+                                document.getElementById('facility').textContent = `Facility Code: ${facilityCode}`;
+                                document.getElementById('card').textContent = `Card Number: ${cardNumber}`;
+                            }
+                        }
+
+                        // QR kod taraması sürekli devam etsin
+                        requestAnimationFrame(scanQRCode);
+                    };
+
+                    scanQRCode();
+                });
+            } catch (error) {
+                errorMessageElement.textContent = 'Error accessing camera: ' + error.message;
+                console.error('Camera error:', error);
+            }
+        }
+
+        // QR kod verisini çözme
+        function processQRCodeData(qrData) {
+            try {
+                // QR kod verisini virgülle ayır ve çözümle
+                const parts = qrData.split(',');
+                if (parts.length >= 1) {
+                    const number = parseInt(parts[0]);
+                    if (isNaN(number)) {
+                        throw new Error('Invalid QR data format');
+                    }
+                    const facilityCode = Math.floor(number / 65536);  // Facility Code
+                    const cardNumber = number % 65536;  // Card Number
+                    return [facilityCode, cardNumber];
+                }
+                throw new Error('Invalid QR data format');
+            } catch (error) {
+                console.error('Error processing QR code data:', error);
+                return [null, null];
+            }
+        }
+
+        // Kamerayı başlat
+        startCamera();
+    </script>
+</body>
+</html>
